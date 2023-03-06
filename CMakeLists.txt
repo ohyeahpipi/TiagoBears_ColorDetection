@@ -34,7 +34,6 @@ catkin_package(
 )
 
 catkin_install_python(PROGRAMS scripts/color_detection_node.py
-  scripts/color_detec_server.py scripts/color_detec_client.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
