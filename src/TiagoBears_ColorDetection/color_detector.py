@@ -9,7 +9,7 @@ import numpy as np
 import cv2
 from cv_bridge import CvBridge, CvBridgeError
 
-from TiagoBears_ColorDetection.srv import Getcolor, GetcolorResponse
+from TiagoBears_ColorDetection.srv import Getcolor, GetcolorResponse, InitEmpty
 from TiagoBears_ColorDetection.msg import StringArray
 
 color_H_range={
@@ -42,6 +42,28 @@ class ColorDetectorServer:
 		# self.cubesMsg=[]
         self.color_publish = rospy.Publisher('seen_colors', String, queue_size=10)
         self.s = rospy.Service('/get_colors', Getcolor, self.get_colors)
+        self.init_empty_check=rospy.Service('/init_empty_check', InitEmpty, self.init)
+        self.empty_left=rospy.Service('/empty_left', InitEmpty, self.check_left)
+
+        self.init_left_img=None
+        self.init_right_img=None
+
+    def init(self, request):
+        # get img
+        img=rospy.wait_for_message(self.image_topic, Image)
+        img=self.bridge.imgmsg_to_cv2(img, "bgr8")
+        self.init_left_img=img[:200, :200]
+        self.init_right_img=img[:200, -200:]
+        return True
+
+    def check_left(self, request):
+        # get img
+        img=rospy.wait_for_message(self.image_topic, Image)
+        img=self.bridge.imgmsg_to_cv2(img, "bgr8")[:200, :200]
+        diff = cv2.absdiff(img , self.init_left_img)
+        cv2.imshow("diff",diff)
+        cv2.waitKey(10000)
+        return True
   
 	# def update_colors(self):
 	# 	""" A function to detect the color for the cube depedning on its position
