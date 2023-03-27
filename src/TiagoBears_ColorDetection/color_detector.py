@@ -64,18 +64,30 @@ class ColorDetectorServer:
         img=rospy.wait_for_message(self.image_topic, Image)
         img=self.bridge.imgmsg_to_cv2(img, "bgr8")[:200, :200]
         diff = cv2.absdiff(img , self.init_left_img)
+<<<<<<< HEAD
         # print(np.sum(diff))
         # cv2.imshow("diff",diff)
         # cv2.waitKey(10000)
         return np.sum(diff) > 700000 # true means: cube was found
+=======
+        cv2.imshow("diff",diff)
+        cv2.waitKey(10000)
+        return True
+>>>>>>> 4341d74898ddc27323f85966cdb300be7eb973d7
 
     def check_right(self,request):
         img=rospy.wait_for_message(self.image_topic, Image)
         img=self.bridge.imgmsg_to_cv2(img, "bgr8")[:200, -200:]
         diff = cv2.absdiff(img , self.init_right_img)
+<<<<<<< HEAD
         # cv2.imshow("diff",diff)
         # cv2.waitKey(10000)
         return np.sum(diff) > 700000 # true means: cube was found
+=======
+        cv2.imshow("diff",diff)
+        cv2.waitKey(10000)
+        return True
+>>>>>>> 4341d74898ddc27323f85966cdb300be7eb973d7
 
   
 	# def update_colors(self):
@@ -105,7 +117,11 @@ class ColorDetectorServer:
 
         for contour in contours:
             area = cv2.contourArea(contour)
+<<<<<<< HEAD
             if 190 < area < 10000:
+=======
+            if 180 < area < 10000:
+>>>>>>> 4341d74898ddc27323f85966cdb300be7eb973d7
                 contours_count += 1
                 M = cv2.moments(contour)
                 if M["m00"] != 0:
@@ -136,8 +152,13 @@ class ColorDetectorServer:
             arm_flag = "right"
             img_mask = self.color_detec(current_right_img, color)
             self.search_contours(current_right_img,img_mask, color,arm_flag)
+<<<<<<< HEAD
         rospy.loginfo(self.left_cube_color)
         rospy.loginfo(self.right_cube_color)
+=======
+        # rospy.loginfo(self.left_cube_color)
+        # rospy.loginfo(self.right_cube_color)
+>>>>>>> 4341d74898ddc27323f85966cdb300be7eb973d7
 
         # img_mask = self.color_detec(current_left_img, 'blue')
         # self.search_contours(current_left_img,img_mask, 'blue',"left")
@@ -145,7 +166,7 @@ class ColorDetectorServer:
         # cv2.imshow('image',img_mask)
         # cv2.waitKey(20000)
 
-		# publish the color
+	# publish the color
         # for i in range(len(color_and_locations)):
         #     self.color_publish.publish(color_and_locations[i][0]+","+str(color_and_locations[i][1])+","+str(color_and_locations[i][2])+","+str(color_and_locations[i][3]))
         # self.color_publish.publish('***************************************************************')
