@@ -9,20 +9,20 @@ import numpy as np
 import cv2
 from cv_bridge import CvBridge, CvBridgeError
 
-from TiagoBears_ColorDetection.srv import Getcolor, GetcolorResponse
+from TiagoBears_ColorDetection.srv import Getcolor, GetcolorResponse, InitEmpty
 from TiagoBears_ColorDetection.msg import StringArray
 
 color_H_range={
     'red':[0,10],
-    'blue':[99,125],
+    'blue':[100,124],
     'yellow':[20,34],
-    'green':[35,77]
+    'green':[35,90]
 }
 color_Smin_Vmin={
-    'red':[50,20],
-    'blue':[25,25],
-    'yellow':[50,20],
-    'green':[50,20]
+    'red':[10,100],
+    'blue':[10,140],
+    'yellow':[30,240],
+    'green':[40,170]
 }
 
 class ColorDetectorServer:
@@ -39,9 +39,43 @@ class ColorDetectorServer:
 		# for i in range(28):
 		# 	self.color_pubs.append(rospy.Publisher('/seen_colors'.format(i), String, queue_size=1))
         self.cubes=[]
+        self.left_cube_color = "no cube!!!!"
+        self.right_cube_color = "no cube!!!!"
 		# self.cubesMsg=[]
         self.color_publish = rospy.Publisher('seen_colors', String, queue_size=10)
         self.s = rospy.Service('/get_colors', Getcolor, self.get_colors)
+        self.init_empty_check=rospy.Service('/init_empty_check', InitEmpty, self.init)
+        self.empty_left=rospy.Service('/empty_left', InitEmpty, self.check_left)
+
+        self.init_left_img=None
+        self.init_right_img=None
+
+    def init(self, request):
+        # get img
+        img=rospy.wait_for_message(self.image_topic, Image)
+        img=self.bridge.imgmsg_to_cv2(img, "bgr8")
+        # the init_img should be reset every time 
+        self.init_left_img=img[:200, :200]
+        self.init_right_img=img[:200, -200:]
+        return True
+
+    def check_left(self, request):
+        # get img
+        img=rospy.wait_for_message(self.image_topic, Image)
+        img=self.bridge.imgmsg_to_cv2(img, "bgr8")[:200, :200]
+        diff = cv2.absdiff(img , self.init_left_img)
+        cv2.imshow("diff",diff)
+        cv2.waitKey(10000)
+        return True
+
+    def check_right(self,request):
+        img=rospy.wait_for_message(self.image_topic, Image)
+        img=self.bridge.imgmsg_to_cv2(img, "bgr8")[:200, -200:]
+        diff = cv2.absdiff(img , self.init_right_img)
+        cv2.imshow("diff",diff)
+        cv2.waitKey(10000)
+        return True
+
   
 	# def update_colors(self):
 	# 	""" A function to detect the color for the cube depedning on its position
@@ -64,13 +98,13 @@ class ColorDetectorServer:
         mask = cv2.inRange(hsv, lower_hsv, upper_hsv)
         return mask
 
-    def search_contours(self,img,mask,color):
+    def search_contours(self,img,mask,color,arm_flag):
         contours_count = 0
-        contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        i=0
+        _,contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
         for contour in contours:
             area = cv2.contourArea(contour)
-            if 5 < area < 10000:
+            if 180 < area < 10000:
                 contours_count += 1
                 M = cv2.moments(contour)
                 if M["m00"] != 0:
@@ -79,27 +113,38 @@ class ColorDetectorServer:
                 else:
                     cX, cY = 0, 0
                 cv2.circle(img, (cX, cY), 3, (255, 255, 255), -1)
-                self.cubes.append([color,i,cX,cY])	
-                i=i+1
-        return self.cubes
+                if arm_flag == "left":
+                    self.left_cube_color = color
+                elif arm_flag == "right":
+                    self.right_cube_color = color
+                #rospy.loginfo(color)
+
 
     def detect_cubes(self):
         # get img
         img=rospy.wait_for_message(self.image_topic, Image)
         img=self.bridge.imgmsg_to_cv2(img, "bgr8")
+        current_left_img = img[:200, :200]
+        current_right_img = img[:200, -200:]
+
         # get color and location
         for color in color_H_range.keys():
-            img_mask = self.color_detec(img, color)
-            color_and_locations = self.search_contours(img,img_mask, color)
-            #rospy.loginfo(color_and_locations[0][1])
+            arm_flag = "left"
+            img_mask = self.color_detec(current_left_img, color)
+            self.search_contours(current_left_img,img_mask, color,arm_flag)
+            arm_flag = "right"
+            img_mask = self.color_detec(current_right_img, color)
+            self.search_contours(current_right_img,img_mask, color,arm_flag)
+        # rospy.loginfo(self.left_cube_color)
+        # rospy.loginfo(self.right_cube_color)
 
-        img_mask = self.color_detec(img, 'red')
-        locations = self.search_contours(img,img_mask, 'red')
-        rospy.loginfo(locations)
-        cv2.imshow('image',img)
-        cv2.waitKey(20000)
+        # img_mask = self.color_detec(current_left_img, 'blue')
+        # self.search_contours(current_left_img,img_mask, 'blue',"left")
+        # rospy.loginfo(self.left_cube_color)
+        # cv2.imshow('image',img_mask)
+        # cv2.waitKey(20000)
 
-		# publish the color
+	# publish the color
         # for i in range(len(color_and_locations)):
         #     self.color_publish.publish(color_and_locations[i][0]+","+str(color_and_locations[i][1])+","+str(color_and_locations[i][2])+","+str(color_and_locations[i][3]))
         # self.color_publish.publish('***************************************************************')
@@ -108,40 +153,28 @@ class ColorDetectorServer:
     def get_colors(self,request):
         self.detect_cubes()
         print("_________________________")
-        print("___Request color: "+request.req_color+"___")
+        print("___Request color: "+request.req_arm+"___")
         print("_________________________")
-        red_cubes=[]
-        blue_cubes=[]
-        yellow_cubes=[]
-        green_cubes=[]
-        all_cubes=[]
-        for pro_cube in self.cubes:
-            #rospy.loginfo(pro_cube[0])
-            if pro_cube[0]=='red':
-                red_cubes.append(StringArray(pro_cube[0],pro_cube[1],pro_cube[2],pro_cube[3]))
-            elif pro_cube[0]=='blue':
-                blue_cubes.append(StringArray(pro_cube[0],pro_cube[1],pro_cube[2],pro_cube[3]))
-            elif pro_cube[0]=='yellow':
-                yellow_cubes.append(StringArray(pro_cube[0],pro_cube[1],pro_cube[2],pro_cube[3]))
-            elif pro_cube[0]=='green':
-                green_cubes.append(StringArray(pro_cube[0],pro_cube[1],pro_cube[2],pro_cube[3]))
-            all_cubes.append(StringArray(pro_cube[0],pro_cube[1],pro_cube[2],pro_cube[3]))
-        if request.req_color =="red":
-            color_back = red_cubes
-        elif request.req_color == "blue":
-            color_back = blue_cubes
-        elif request.req_color == "yellow":
-            color_back = yellow_cubes
-        elif request.req_color == "green":
-            color_back = green_cubes
-        elif request.req_color == "all":
-            color_back = all_cubes
+        left_arm_cube = self.left_cube_color
+        right_arm_cube = self.right_cube_color
+        both_arm_cubes=[]
+        both_arm_cubes.append(StringArray("left_arm",left_arm_cube))
+        both_arm_cubes.append(StringArray("right_arm",right_arm_cube))
+
+
+        if request.req_arm =="left":
+            color_back = [StringArray("left_arm",left_arm_cube)]
+        elif request.req_arm == "right":
+            color_back = [StringArray("right_arm",right_arm_cube)]
+        elif request.req_arm == "both":
+            color_back = both_arm_cubes
         else:
-            color_wrong = StringArray('wrong color', 0,0,0)
+            color_wrong = StringArray("wrong_arm_req", "no color info")
             color_back = [color_wrong]
         response = GetcolorResponse()
         response.colors = color_back
-        self.cubes=[]
+        self.left_cube_color = "no cube!!!!"
+        self.right_cube_color = "no cube!!!!"
 
         return response
 	
