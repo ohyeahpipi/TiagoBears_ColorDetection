@@ -22,22 +22,18 @@ add_service_files(
 
 catkin_python_setup()
 
+catkin_install_python(PROGRAMS scripts/color_detection_node.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
 generate_messages(
   DEPENDENCIES
   std_msgs
 )
 
 catkin_package(
-  
-  CATKIN_DEPENDS message_runtime
+  CATKIN_DEPENDS 
+  message_runtime
   rospy
   std_msgs
 )
-
-catkin_install_python(PROGRAMS scripts/color_detection_node.py
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
-
-
-
-

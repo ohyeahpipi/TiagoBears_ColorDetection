@@ -46,8 +46,9 @@ class ColorDetectorServer:
 		# self.cubesMsg=[]
         self.color_publish = rospy.Publisher('seen_colors', String, queue_size=10)
         self.s = rospy.Service('/get_colors', Getcolor, self.get_colors)
-        self.init_empty_check=rospy.Service('/init_empty_check', InitEmpty, self.init)
-        self.empty_left=rospy.Service('/empty_left', InitEmpty, self.check_left)
+        self.init_empty_check=rospy.Service('/TiagoBears/init_empty_check', InitEmpty, self.init)
+        self.empty_left=rospy.Service('/TiagoBears/is_empty_left', InitEmpty, self.check_left)
+        self.empty_right=rospy.Service('/TiagoBears/is_empty_right', InitEmpty, self.check_right)
 
         self.init_left_img=None
         self.init_right_img=None
@@ -72,7 +73,7 @@ class ColorDetectorServer:
         # cv2.imshow("diff",diff)
         # cv2.imshow("thresh",thresh1)
         # cv2.waitKey(10000)
-        return np.sum(diff) > 700000 # true means: cube was found
+        return not (np.sum(diff) > 700000) # true means: gripper is empty, no cube found
 
     def check_right(self,request):
         img=rospy.wait_for_message(self.image_topic, Image)
@@ -80,7 +81,7 @@ class ColorDetectorServer:
         diff = cv2.absdiff(img , self.init_right_img)
         # cv2.imshow("diff",diff)
         # cv2.waitKey(10000)
-        return np.sum(diff) > 700000 # true means: cube was found
+        return not (np.sum(diff) > 700000) # true means: gripper is empty, no cube found
 
     def get_mask(self,diff_img):
         lower_hsv=np.array([0,43,46])
