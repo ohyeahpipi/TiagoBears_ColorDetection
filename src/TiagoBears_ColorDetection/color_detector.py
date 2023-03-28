@@ -19,10 +19,10 @@ color_H_range={
     'green':[35,90]
 }
 color_Smin_Vmin={
-    'red':[10,100],
-    'blue':[10,140],
-    'yellow':[30,240],
-    'green':[40,170]
+    'red':[100,100],
+    'blue':[40,80],
+    'yellow':[60,240],
+    'green':[40,140]
 }
 
 class ColorDetectorServer:
@@ -39,8 +39,10 @@ class ColorDetectorServer:
 		# for i in range(28):
 		# 	self.color_pubs.append(rospy.Publisher('/seen_colors'.format(i), String, queue_size=1))
         self.cubes=[]
-        self.left_cube_color = "no cube!!!!"
-        self.right_cube_color = "no cube!!!!"
+        self.left_cube_color = "no color info"
+        self.right_cube_color = "no color info"
+        self.left_mask1=None
+        self.right_mask1=None
 		# self.cubesMsg=[]
         self.color_publish = rospy.Publisher('seen_colors', String, queue_size=10)
         self.s = rospy.Service('/get_colors', Getcolor, self.get_colors)
@@ -57,6 +59,7 @@ class ColorDetectorServer:
         # the init_img should be reset every time 
         self.init_left_img=img[:200, :200]
         self.init_right_img=img[:200, -200:]
+        print("init_img are saved")
         return True
 
     def check_left(self, request):
@@ -64,32 +67,32 @@ class ColorDetectorServer:
         img=rospy.wait_for_message(self.image_topic, Image)
         img=self.bridge.imgmsg_to_cv2(img, "bgr8")[:200, :200]
         diff = cv2.absdiff(img , self.init_left_img)
-<<<<<<< HEAD
+        thresh1 = self.get_mask(diff)
         # print(np.sum(diff))
         # cv2.imshow("diff",diff)
+        # cv2.imshow("thresh",thresh1)
         # cv2.waitKey(10000)
         return np.sum(diff) > 700000 # true means: cube was found
-=======
-        cv2.imshow("diff",diff)
-        cv2.waitKey(10000)
-        return True
->>>>>>> 4341d74898ddc27323f85966cdb300be7eb973d7
 
     def check_right(self,request):
         img=rospy.wait_for_message(self.image_topic, Image)
         img=self.bridge.imgmsg_to_cv2(img, "bgr8")[:200, -200:]
         diff = cv2.absdiff(img , self.init_right_img)
-<<<<<<< HEAD
         # cv2.imshow("diff",diff)
         # cv2.waitKey(10000)
         return np.sum(diff) > 700000 # true means: cube was found
-=======
-        cv2.imshow("diff",diff)
-        cv2.waitKey(10000)
-        return True
->>>>>>> 4341d74898ddc27323f85966cdb300be7eb973d7
 
-  
+    def get_mask(self,diff_img):
+        lower_hsv=np.array([0,43,46])
+        upper_hsv=np.array([180,255,255])
+        hsv=cv2.cvtColor(diff_img, cv2.COLOR_BGR2HSV)
+        mask1 = cv2.inRange(hsv, lower_hsv, upper_hsv)
+        return mask1
+    
+    def cut_img(self,img,mask1):
+        result_img = cv2.bitwise_and(img,img,mask1)
+        return result_img
+        
 	# def update_colors(self):
 	# 	""" A function to detect the color for the cube depedning on its position
   	# 	"""
@@ -117,11 +120,7 @@ class ColorDetectorServer:
 
         for contour in contours:
             area = cv2.contourArea(contour)
-<<<<<<< HEAD
-            if 190 < area < 10000:
-=======
-            if 180 < area < 10000:
->>>>>>> 4341d74898ddc27323f85966cdb300be7eb973d7
+            if 50 < area < 10000:
                 contours_count += 1
                 M = cv2.moments(contour)
                 if M["m00"] != 0:
@@ -144,26 +143,32 @@ class ColorDetectorServer:
         current_left_img = img[:200, :200]
         current_right_img = img[:200, -200:]
 
-        # get color and location
+        # ##get color and location
         for color in color_H_range.keys():
             arm_flag = "left"
-            img_mask = self.color_detec(current_left_img, color)
-            self.search_contours(current_left_img,img_mask, color,arm_flag)
+            diff = cv2.absdiff(current_left_img, self.init_left_img)
+            thresh1 = self.get_mask(diff)
+            c_img = self.cut_img(current_left_img,thresh1)
+            img_mask = self.color_detec(c_img, color)
+            self.search_contours(c_img,img_mask, color,arm_flag)
             arm_flag = "right"
-            img_mask = self.color_detec(current_right_img, color)
-            self.search_contours(current_right_img,img_mask, color,arm_flag)
-<<<<<<< HEAD
+            diff = cv2.absdiff(current_right_img, self.init_right_img)
+            thresh1 = self.get_mask(diff)
+            c_img = self.cut_img(current_right_img,thresh1)
+            img_mask = self.color_detec(c_img, color)
+            self.search_contours(c_img,img_mask, color,arm_flag)
         rospy.loginfo(self.left_cube_color)
         rospy.loginfo(self.right_cube_color)
-=======
-        # rospy.loginfo(self.left_cube_color)
-        # rospy.loginfo(self.right_cube_color)
->>>>>>> 4341d74898ddc27323f85966cdb300be7eb973d7
 
-        # img_mask = self.color_detec(current_left_img, 'blue')
-        # self.search_contours(current_left_img,img_mask, 'blue',"left")
+
+        # diff = cv2.absdiff(current_left_img, self.init_left_img)
+        # thresh1 = self.get_mask(diff)
+        # c_img = self.cut_img(current_left_img,thresh1)
+        # img_mask = self.color_detec(c_img, 'green')
+        # self.search_contours(c_img,img_mask, 'green',"left")
         # rospy.loginfo(self.left_cube_color)
-        # cv2.imshow('image',img_mask)
+        # cv2.imshow('mask_image',img_mask)
+        # cv2.imshow('img',current_left_img)
         # cv2.waitKey(20000)
 
 	# publish the color
@@ -195,8 +200,8 @@ class ColorDetectorServer:
             color_back = [color_wrong]
         response = GetcolorResponse()
         response.colors = color_back
-        self.left_cube_color = "no cube!!!!"
-        self.right_cube_color = "no cube!!!!"
+        self.left_cube_color = "no color info"
+        self.right_cube_color = "no color info"
 
         return response
 	
