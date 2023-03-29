@@ -7,7 +7,7 @@ from TiagoBears_ColorDetection.msg import *
 def get_color_client(data):
     rospy.wait_for_service('/get_colors')
     try:
-        get_color = rospy.ServiceProxy('/get_colors',Getcolor)
+        get_color = rospy.ServiceProxy('/TiagoBears/get_colors',Getcolor)
         resp1 = get_color(data)
         return resp1.colors
     except rospy.ServiceException as e:

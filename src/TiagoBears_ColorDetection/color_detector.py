@@ -45,7 +45,7 @@ class ColorDetectorServer:
         self.right_mask1=None
 		# self.cubesMsg=[]
         self.color_publish = rospy.Publisher('seen_colors', String, queue_size=10)
-        self.s = rospy.Service('/get_colors', Getcolor, self.get_colors)
+        self.s = rospy.Service('/TiagoBears/get_colors', Getcolor, self.get_colors)
         self.init_empty_check=rospy.Service('/TiagoBears/init_empty_check', InitEmpty, self.init)
         self.empty_left=rospy.Service('/TiagoBears/is_empty_left', InitEmpty, self.check_left)
         self.empty_right=rospy.Service('/TiagoBears/is_empty_right', InitEmpty, self.check_right)
