@@ -73,7 +73,7 @@ class ColorDetectorServer:
         # cv2.imshow("diff",diff)
         # cv2.imshow("thresh",thresh1)
         # cv2.waitKey(10000)
-        return not (np.sum(diff) > 700000) # true means: gripper is empty, no cube found
+        return not (np.sum(diff) > 1000000) # true means: gripper is empty, no cube found
 
     def check_right(self,request):
         img=rospy.wait_for_message(self.image_topic, Image)
