@@ -69,6 +69,10 @@ class ColorDetectorServer:
         img=self.bridge.imgmsg_to_cv2(img, "bgr8")[:200, :200]
         diff = cv2.absdiff(img , self.init_left_img)
         thresh1 = self.get_mask(diff)
+
+        # cv2.imwrite('init_left_img.png', self.init_left_img)
+        # cv2.imwrite('gripper_left_img.png', img)
+        # cv2.imwrite('diff_left_img.png', diff)
         # print(np.sum(diff))
         # cv2.imshow("diff",diff)
         # cv2.imshow("thresh",thresh1)
@@ -79,6 +83,11 @@ class ColorDetectorServer:
         img=rospy.wait_for_message(self.image_topic, Image)
         img=self.bridge.imgmsg_to_cv2(img, "bgr8")[:200, -200:]
         diff = cv2.absdiff(img , self.init_right_img)
+
+        # cv2.imwrite('init_right_img.png', self.init_right_img)
+        # cv2.imwrite('gripper_right_img.png', img)
+        # cv2.imwrite('diff_right_img.png', diff)
+
         # cv2.imshow("diff",diff)
         # cv2.waitKey(10000)
         return not (np.sum(diff) > 700000) # true means: gripper is empty, no cube found
